@@ -2,6 +2,9 @@
 prime_engine
 prime_standalone
 test_suite
+prime_fast
+prime_fast_omp
+test_meissel
 *.o
 
 # LaTeX build artifacts
