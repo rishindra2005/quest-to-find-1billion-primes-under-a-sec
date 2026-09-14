@@ -8,6 +8,7 @@ prime_ultra
 prime_ultra_omp
 test_ultra_suite
 test_meissel
+primecount_kim/
 *.o
 
 # LaTeX build artifacts
