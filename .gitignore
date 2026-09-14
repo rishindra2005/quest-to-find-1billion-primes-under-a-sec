@@ -4,6 +4,9 @@ prime_standalone
 test_suite
 prime_fast
 prime_fast_omp
+prime_ultra
+prime_ultra_omp
+test_ultra_suite
 test_meissel
 *.o
 

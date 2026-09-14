@@ -3,12 +3,21 @@ AS ?= as
 CFLAGS ?= -O3 -march=native -pthread -Wall -Wextra
 LDFLAGS ?= -lm -pthread
 
-TARGETS = prime_fast prime_fast_omp prime_engine prime_standalone test_suite
+TARGETS = prime_ultra prime_ultra_omp prime_fast prime_fast_omp prime_engine prime_standalone test_suite test_ultra_suite
 
 all: $(TARGETS)
 
+fast_prime_asm.o: fast_prime_asm.s
+	$(AS) fast_prime_asm.s -o fast_prime_asm.o
+
 sieve_kernel.o: sieve_kernel.s
 	$(AS) sieve_kernel.s -o sieve_kernel.o
+
+prime_ultra: prime_ultra.c fast_prime_asm.o sieve_kernel.o
+	$(CC) $(CFLAGS) prime_ultra.c fast_prime_asm.o sieve_kernel.o -o prime_ultra $(LDFLAGS)
+
+prime_ultra_omp: prime_ultra_omp.c fast_prime_asm.o sieve_kernel.o
+	$(CC) $(CFLAGS) -fopenmp prime_ultra_omp.c fast_prime_asm.o sieve_kernel.o -o prime_ultra_omp $(LDFLAGS)
 
 prime_fast: prime_fast.c sieve_kernel.o
 	$(CC) $(CFLAGS) prime_fast.c sieve_kernel.o -o prime_fast $(LDFLAGS)
@@ -25,6 +34,15 @@ prime_standalone: prime_standalone.s sieve_kernel.o
 test_suite: test_suite.c prime_engine.c sieve_kernel.o
 	$(CC) $(CFLAGS) -DNO_MAIN test_suite.c prime_engine.c sieve_kernel.o -o test_suite $(LDFLAGS)
 
+test_ultra_suite: test_ultra_suite.c prime_ultra.c fast_prime_asm.o sieve_kernel.o
+	$(CC) $(CFLAGS) -DNO_MAIN test_ultra_suite.c prime_ultra.c fast_prime_asm.o sieve_kernel.o -o test_ultra_suite $(LDFLAGS)
+
+run-ultra: prime_ultra
+	./prime_ultra 1000000000
+
+run-ultra-omp: prime_ultra_omp
+	./prime_ultra_omp 1000000000
+
 run-fast: prime_fast
 	./prime_fast 1000000000
 
@@ -37,10 +55,10 @@ run: prime_engine
 run-standalone: prime_standalone
 	./prime_standalone
 
-test: test_suite
-	./test_suite
+test: test_suite test_ultra_suite
+	./test_ultra_suite
 
 clean:
-	rm -f $(TARGETS) test_meissel *.o
+	rm -f $(TARGETS) *.o
 
-.PHONY: all run run-fast run-fast-omp run-standalone test clean
+.PHONY: all run run-ultra run-ultra-omp run-fast run-fast-omp run-standalone test clean
