@@ -1,0 +1,37 @@
+# Binaries & Object files
+prime_engine
+prime_standalone
+test_suite
+*.o
+
+# LaTeX build artifacts
+*.aux
+*.log
+*.out
+*.toc
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+
+# Media: Videos, Images, and Audio
+*.mp4
+*.mp3
+*.wav
+*.png
+*.jpg
+*.jpeg
+*.gif
+vid/frames/
+
+# Video build & venv artifacts
+vid/venv/
+vid/sys_deps/
+vid/media/
+vid/output/
+__pycache__/
+*/__pycache__/
+*.pyc
+
+# OS artifacts
+.DS_Store
+Thumbs.db

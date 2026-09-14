@@ -1,0 +1,205 @@
+#!/usr/bin/env python3
+"""
+Audio & Narration Generator for 10-Minute Video: "Engineering the Billionth Prime"
+Voice: en-US-ChristopherNeural (Authoritative, Clear, Deep, Documentary/Veritasium/3Blue1Brown style)
+Generates high-fidelity narration for all 6 acts, measures precise durations, and outputs narration_timings.json.
+"""
+
+import asyncio
+import json
+import os
+import subprocess
+import edge_tts
+
+SCRIPT = {
+    "scene1": {
+        "title": "Act I: The Frontier of Primes & The Billionth Target",
+        "narration": (
+            "Since the dawn of mathematics, prime numbers have stood as the indivisible atoms of arithmetic. "
+            "Every integer is either a prime or a unique tapestry woven from their multiplication. "
+            "Yet, as we walk down the infinite number line, primes become increasingly elusive, thinning out into the dark. "
+            "In 1792, a fifteen-year-old Carl Friedrich Gauss noticed a profound regularity beneath this apparent chaos: "
+            "the density of prime numbers near a value x drops inversely with the natural logarithm of x. "
+            "This gives us the celebrated Prime Number Theorem: the number of primes up to x is asymptotically x divided by the natural log of x. "
+            "Now consider a question of staggering scale: What is the one-billionth prime number? "
+            "To reach the one-billionth prime, we cannot stop at one billion. Inverting Gauss's formula reveals that we must journey all the way past twenty-two billion! "
+            "Specifically, the exact answer, cataloged in the Online Encyclopedia of Integer Sequences as A006988, is twenty-two billion, eight hundred and one million, seven hundred and sixty-three thousand, four hundred and eighty-nine. "
+            "Think about that number for a moment. If you wrote down a simple program using trial division, testing each candidate against potential divisors, "
+            "your computer would have to perform trillions of divisions. Even at gigahertz speeds, it would take centuries of compute time! "
+            "Clearly, brute force is dead on arrival. To conquer the billionth prime, we must combine the deep elegance of number theory with the raw, mechanical reality of modern silicon."
+        )
+    },
+    "scene2": {
+        "title": "Act II: The Physical Silicon & The CPU Memory Wall",
+        "narration": (
+            "Over two thousand years ago, the Greek polymath Eratosthenes gave us the sieve: "
+            "write down all integers, and whenever you find a prime, strike out every multiple of that prime. "
+            "What remains untouched must be prime. It is an algorithm of pure beauty, requiring zero divisions. "
+            "So why can't we simply allocate an array for twenty-three billion numbers and run Eratosthenes' sieve? "
+            "Here, we collide directly with the physical universe. "
+            "An array of twenty-three billion bytes would consume twenty-three gigabytes of memory. "
+            "Even if we packed each boolean into a single bit, we would still demand nearly three gigabytes of continuous storage! "
+            "Now let us look at the anatomy of a modern processor, like the AMD Zen 5 architecture humming at over five gigahertz. "
+            "A single clock cycle takes less than two hundred picoseconds. Light itself travels only six centimeters in that time! "
+            "Right on the CPU die, nestled beside the arithmetic logic units, sits the Level 1 data cache: forty-eight kilobytes of blazing SRAM, "
+            "accessible in four cycles, delivering over five terabytes per second of bandwidth. "
+            "Beneath it lies the Level 2 cache: one megabyte per core, accessible in fourteen cycles. "
+            "And far away, across the silicon interconnect and memory bus, lies main system RAM. "
+            "Accessing main RAM takes around sixty-five nanoseconds—over two hundred and fifty clock cycles! "
+            "In computer architecture, this disparity is known as the Memory Wall. "
+            "If your algorithm randomly touches gigabytes of system memory, your ultra-fast five-gigahertz core will spend over ninety-five percent of its life "
+            "completely stalled, starving for data. "
+            "To achieve true computational velocity, our entire working dataset must never leave CPU cache!"
+        )
+    },
+    "scene3": {
+        "title": "Act III: The Architecture of the Segmented Sieve & Wheel Factorization",
+        "narration": (
+            "How do you fit twenty-three billion numbers into forty-eight kilobytes of cache? "
+            "The answer is the Segmented Sieve, combined with wheel factorization. "
+            "First, notice that two is the only even prime. Every single other even number is composite. "
+            "By wheel-two factorization, we discard all even numbers before we even begin. "
+            "We only track odd numbers: three, five, seven, nine, eleven, and so forth. "
+            "Each odd integer X corresponds to an index k equals X minus one divided by two. "
+            "With this single mathematical stroke, our entire search space is cut exactly in half! "
+            "Next comes a foundational theorem of number theory: any composite number M must have at least one prime factor less than or equal to the square root of M. "
+            "To sieve all composite numbers up to twenty-two point eight billion, what is the largest prime factor we could ever possibly need? "
+            "It is simply the square root of twenty-two point eight billion—which is approximately one hundred and fifty-one thousand and five! "
+            "And how many prime numbers exist up to one hundred and fifty-one thousand? Exactly thirteen thousand, eight hundred and forty-seven primes! "
+            "Storing thirteen thousand primes as thirty-two-bit integers requires just fifty-five kilobytes of memory! "
+            "This table of base primes fits permanently inside the CPU cache for the entire lifetime of the program. "
+            "Now, instead of sieving the entire number line at once, we slide a tiny window of sixty-four kilobytes across the numbers. "
+            "Each window represents sixty-five thousand odd numbers. We cross off multiples within that single segment, count the surviving primes, "
+            "and then reuse the exact same sixty-four kilobyte buffer for the next segment! "
+            "And here is the mathematical jewel: when a prime p crosses the boundary of segment S at index j, "
+            "its starting offset in the next segment is simply j minus S. "
+            "No division, no modulo, no memory allocation. The sieve glides across the number line at pure cache speed!"
+        )
+    },
+    "scene4": {
+        "title": "Act IV: The Silicon Battlefield: x86_64 Assembly Optimization",
+        "narration": (
+            "When you compile high-level code, the compiler makes conservative assumptions. "
+            "To extract the absolute thermodynamic limit of the silicon, we descended into hand-crafted x86_64 assembly. "
+            "And our very first discovery shattered conventional textbook wisdom. "
+            "The standard computer science textbook tells you: 'Pack your sieve into bits! Use the bit-test-and-reset instruction, BTR, to save memory.' "
+            "We benchmarked this on modern silicon. Sifting with BTR took one hundred and nineteen million CPU cycles. "
+            "Why? Because modifying a bit inside a memory byte requires a serialized Read-Modify-Write microcode sequence. "
+            "The core has to fetch the byte, lock the bit, modify it, and write it back. It creates an execution stall! "
+            "Instead, we dedicated one full byte per odd number. We used direct byte stores: move byte pointer, one. "
+            "Modern cores like Zen 5 have Dual Store Address Generation Units. They can execute two independent byte stores in a single clock cycle directly into the store buffer! "
+            "The result? The byte-store sieve completed in just four point three million cycles—twenty-seven point seven times faster than the bit instruction! "
+            "Furthermore, branch prediction is critical. A single mispredicted branch costs up to twenty pipeline stages. "
+            "To eliminate branch penalties, we classified primes into distinct execution regimes: "
+            "Primes up to sixteen are unrolled sixteen times. Primes up to sixty-four are unrolled eight times. "
+            "Primes up to five hundred and twelve are unrolled four times. "
+            "And for large primes greater than sixty-five thousand, which can only hit a sixty-four kilobyte segment at most once, "
+            "we eliminate loops entirely using branchless conditional stores. Every CPU cycle is harnessed without a wasted breath."
+        )
+    },
+    "scene5": {
+        "title": "Act V: The Vector Blitz: 512-Bit AVX-512 & BMI1 Bit Pinpointing",
+        "narration": (
+            "Once a segment is marked, we must count how many primes survived. "
+            "In our sixty-four kilobyte buffer, every zero represents a prime, and every one represents a composite. "
+            "Checking sixty-five thousand bytes one by one in a scalar loop would be an agonizing bottleneck. "
+            "This is where modern SIMD vectorization enters the arena: AVX-512. "
+            "AVX-512 provides five-hundred-and-twelve-bit vector registers—each holding sixty-four distinct eight-bit bytes simultaneously! "
+            "With the instruction VMOVDQU8, we load sixty-four bytes into register ZMM0 in a single clock cycle. "
+            "With VPCMPEQB, we compare all sixty-four bytes against zero in parallel. "
+            "This comparison produces a sixty-four-bit mask in vector mask register K1, where each bit is one if the corresponding byte was zero. "
+            "We transfer this mask to a general-purpose register using KMOVQ, and in the very next cycle, "
+            "the hardware POPCNT instruction counts every single set bit in one cycle! "
+            "By unrolling this loop four ways, our assembly kernel inspects two hundred and fifty-six bytes on every single iteration! "
+            "A sixty-four-kilobyte segment is completely counted in just two hundred and fifty-six loop cycles—fractions of a microsecond! "
+            "And what happens when our running counter finally crosses one billion? "
+            "We do not fall back to a linear scan. Instead, we deploy the Bit Manipulation Instruction set, BMI1. "
+            "Using TZCNT—trailing zero count—we find the index of the first prime bit in the mask. "
+            "Using BLSR—reset lowest set bit—we peel off primes one by one until we hit the exact target rank. "
+            "The exact one-billionth prime is pinpointed in single-digit nanoseconds!"
+        )
+    },
+    "scene6": {
+        "title": "Act VI: Multi-Core Symphony & The Climax",
+        "narration": (
+            "The final frontier is scale. Modern processors are not solitary beasts; our Zen 5 chip houses twelve physical cores and twenty-four hardware threads. "
+            "How do we coordinate twenty-four threads without them fighting over locks? "
+            "Mutexes and locks cause thread contention and destroy performance. "
+            "Instead, we built a dynamic, lock-free work-stealing scheduler using hardware atomic fetch and add. "
+            "The number line is partitioned into chunks. Each thread independently fetches the next chunk atomically, "
+            "allocates its own sixty-four-kilobyte cache-aligned segment buffer, and sieves at maximum unthrottled IPC. "
+            "When we executed our pure assembly standalone binary on a single core, it reached the billionth prime in just nine point two eight seconds. "
+            "And when all twenty-four hardware threads engaged the multi-core engine with AVX-512... "
+            "Twenty-two point eight billion numbers were sieved, verified, and counted in zero point eight nine eight seconds! "
+            "That is twenty-five point three eight billion numbers processed every single second—over one point one billion primes discovered per second! "
+            "And at the finish line stands the crown jewel of our journey: "
+            "The one-billionth prime number is twenty-two billion, eight hundred and one million, seven hundred and sixty-three thousand, four hundred and eighty-nine! "
+            "This is the art of computer science: taking an ancient mathematical truth from Eratosthenes and Gauss, "
+            "stripping away layers of abstraction, and orchestrating billions of transistors into a breathtaking, sub-second symphony."
+        )
+    }
+}
+
+async def generate_scene_audio(scene_id, data, output_dir, voice="en-US-ChristopherNeural"):
+    mp3_path = os.path.join(output_dir, f"{scene_id}_audio.mp3")
+    wav_path = os.path.join(output_dir, f"{scene_id}_audio.wav")
+    text = data["narration"]
+    
+    print(f"Synthesizing [{scene_id}] '{data['title']}'...")
+    try:
+        comm = edge_tts.Communicate(text, voice=voice)
+        await comm.save(mp3_path)
+    except Exception as e:
+        print(f"edge_tts encountered error: {e}. Using gTTS fallback...")
+        from gtts import gTTS
+        tts = gTTS(text=text, lang='en', tld='com')
+        tts.save(mp3_path)
+        
+    # Convert to WAV with 44.1kHz stereo for perfect video master alignment
+    subprocess.run([
+        "ffmpeg", "-y", "-i", mp3_path,
+        "-ar", "44100", "-ac", "2", wav_path
+    ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True)
+    
+    # Get exact duration
+    probe = subprocess.run([
+        "ffprobe", "-v", "error",
+        "-show_entries", "format=duration",
+        "-of", "default=noprint_wrappers=1:nokey=1",
+        wav_path
+    ], capture_output=True, text=True, check=True)
+    
+    duration = float(probe.stdout.strip())
+    word_count = len(text.split())
+    print(f"  -> Generated {duration:.2f}s ({word_count} words)")
+    
+    return {
+        "title": data["title"],
+        "duration": duration,
+        "word_count": word_count,
+        "mp3": mp3_path,
+        "wav": wav_path,
+        "narration": text
+    }
+
+async def main():
+    out_dir = "/home/rishi/Desktop/tmp/1bgem/vid/audio"
+    os.makedirs(out_dir, exist_ok=True)
+    timings = {}
+    
+    for scene_id, data in SCRIPT.items():
+        res = await generate_scene_audio(scene_id, data, out_dir)
+        timings[scene_id] = res
+        
+    total_dur = sum(t["duration"] for t in timings.values())
+    total_words = sum(t["word_count"] for t in timings.values())
+    print(f"\n=======================================================")
+    print(f"TOTAL NARRATION TIME: {total_dur:.2f} seconds ({total_dur/60:.2f} minutes)")
+    print(f"TOTAL SCRIPT WORDS  : {total_words} words")
+    print(f"=======================================================")
+    
+    with open(os.path.join(out_dir, "narration_timings.json"), "w") as f:
+        json.dump(timings, f, indent=2)
+
+if __name__ == "__main__":
+    asyncio.run(main())
