@@ -9,6 +9,12 @@ prime_ultra_omp
 test_ultra_suite
 test_meissel
 primecount_kim/
+prime_apex/build/
+prime_apex_bin
+test_interleaved
+test_nth_fast
+test_segmented_pi_vec
+test_delta_1e14
 *.o
 
 # LaTeX build artifacts

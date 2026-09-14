@@ -58,7 +58,18 @@ run-standalone: prime_standalone
 test: test_suite test_ultra_suite
 	./test_ultra_suite
 
+apex:
+	cmake -B prime_apex/build -S prime_apex -DCMAKE_BUILD_TYPE=Release
+	cmake --build prime_apex/build -j
+
+run-apex: apex
+	./prime_apex/build/prime_apex 100000000000000 --time
+
+benchmark-apex: apex
+	python3 benchmark_apex_vs_kim.py
+
 clean:
 	rm -f $(TARGETS) *.o
+	rm -rf prime_apex/build
 
-.PHONY: all run run-ultra run-ultra-omp run-fast run-fast-omp run-standalone test clean
+.PHONY: all run run-ultra run-ultra-omp run-fast run-fast-omp run-standalone test clean apex run-apex benchmark-apex
